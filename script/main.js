@@ -1,17 +1,13 @@
 /* Jun/9/2025 - Jun/14/2025 - Lumovalley Labs
  * !This is the original source code for the game Tapclank!
- * ~ V1.01
+ * 
  */
 const cvs = document.getElementById("canvas");
 const screen = cvs.getContext("2d");
 
-let applicationRunning = true;
+const imageBuffer1 = document.createElement("canvas"); // This buffer is for the blocks
+const imageBuffer2 = document.createElement("canvas"); // This buffer is for the UI elements
 
-// This buffer is for the blocks
-const imageBuffer1 = document.createElement("canvas");
-const imageBuffer2 = document.createElement("canvas");
-
-// This buffer is for the UI elements
 const screenBuffer1 = imageBuffer1.getContext("2d");
 const screenBuffer2 = imageBuffer2.getContext("2d");
  
@@ -28,8 +24,8 @@ screenBuffer2.imageSmoothingEnabled = false;
 screenBuffer2.mozImageSmoothingEnabled = false;
 screenBuffer2.webkitImageSmoothingEnabled = false;
 
-
 // Initializing important variables below
+let applicationRunning = false;
 
 let worldChunkCount = 4;
 
@@ -58,7 +54,7 @@ let playerHairType = Math.floor((Math.random()* 7) + 1);
 let playerClicked = false;
 let mouseDown = false;
 
-let mode = 2; // 1 = build, 2 = erase
+let placeMode = 2; // 1 = build, 2 = erase
 
 let playerName = "default";
 
@@ -71,9 +67,11 @@ let blockPreX = 0;
 let blockPreY = 0;
 let blockY = canvas.height-blockSize;
 
+let materialSelected = 1;
+
 let whichChunk = 1; // Which chunk to draw
 let whichChunkRow = 1; // Which row on said chunk to draw
-let whichBlockOnChunkRow = 1; //which block on said row to draw
+let whichBlockOnChunk = 1; //which block on said row to draw
 let timeUntilNextChunkRow = 0;
 let timeUntilNextChunk = 0;
 
@@ -92,13 +90,13 @@ let cursorOverWorld = true;
 let inWorld = false;
 let onMenu = true;
 let gamePaused = false;
+let showingEditorMenu = false;
 
 let placeAudioTime = 10;
 
 // Load in images below
 
-let someValue = 1;
- 
+
 const defaultPlayer = new Image();
 const defaultBackdrop = new Image(); 
 const dayBackdrop1 = new Image();
@@ -126,10 +124,6 @@ playerShade2.src = "gfx/player_shade2.png";
 playerShade3.src = "gfx/player_shade3.png";
 playerShade4.src = "gfx/player_shade4.png";
 
-// Load in audio below
-let stoneDraw = new Audio("sfx/stone_draw01.wav");
-stoneDraw.volume = 0.5;
-
 // The different possible shades of the player
 // There are currently 4 in total
 let playerShades = {
@@ -139,6 +133,78 @@ let playerShades = {
 	4: playerShade4,
 }
 
+// Load in various sounds
+const click1 = new Audio("sfx/bubble_01.wav");
+const stoneFootstep1 = new Audio("sfx/stone_footstep1.wav");
+stoneFootstep1.volume = 0.5;
+
+// The code below was added because there was a bug which caused the menu to not fully load
+// This was because images were being drawn before they were fully loaded
+
+window.onload = function() {
+	applicationRunning = true;
+}
+
+
+// The function below loads the world when the player presses play
+function loadWorld() {
+	screenBuffer1.clearRect(0, 0, imageBuffer1.width, imageBuffer1.height);
+	screenBuffer2.clearRect(0, 0, imageBuffer2.width, imageBuffer2.height);
+	itemMenuBarSlotsAdditionalPositions[1] = 8;
+	itemMenuBarSlotsAdditionalPositions[5] = 8;
+	updateUI = true;
+	updateFrame = true;
+	onMenu = false;
+	inWorld = true;
+	versionTextDraw();
+	drawMenuItemBar();
+	usefulTextDraw();
+	placeMode = true;
+	playerClicked = false;
+}
+
+// The code BELOW NEEDS SERIOUS WORK... actually, no it doesn't.
+// BUT THE SOUNDS BELOW IN THE CODE NEED SERIOUS REFINING!!
+function playFootstepSounds() {
+	stoneFootstep1.play();
+	if (stoneFootstep1.currentTime > 0.18) {
+		//whichFootstepSound = Math.floor((Math.random()* 3) + 1);
+		
+		stoneFootstep1.playbackRate = Math.random() * (1.1 - 1) + 1;
+		stoneFootstep1.preservesPitch = false;
+		stoneFootstep1.currentTime = 0;
+	}
+}
+
+
+// Function for full screen mode
+// *This is highly experimental*
+// There are some problems with collsions, etc, when going full screen
+function goFullScreen() {
+	canvas.height = window.innerHeight;
+	canvas.width = window.innerWidth;
+	imageBuffer1.height = window.innerHeight;
+	imageBuffer1.width = window.innerWidth;
+	imageBuffer2.height = window.innerHeight;
+	imageBuffer2.width = window.innerWidth;
+	
+	blockSize = 7;
+	blockX = 0;
+	playerX_size = 5*blockSize;
+	playerY_size = 7*blockSize;
+	//playerSpeed = blockSize/2;
+	playerX = canvas.width/2 - (playerX_size/2) - (blockSize/2)-3;
+	scrollX = 0;
+	scrollX_inverse = 0;
+	
+	screen.imageSmoothingEnabled = false;
+	screen.mozImageSmoothingEnabled = false;
+	screen.webkitImageSmoothingEnabled = false;
+
+	screenBuffer2.imageSmoothingEnabled = false;
+	screenBuffer2.mozImageSmoothingEnabled = false;
+	screenBuffer2.webkitImageSmoothingEnabled = false;
+}
 
 
 // Function for detecting player collision
@@ -159,7 +225,7 @@ function detectPlayerCollision() {
 		
 	// Horizontal collision detection for the player (movement controls)
 
-	if (blockY < playerY+playerY_size - (2*6) && blockY+blockSize > playerY) { // Vertical - (2*6) for being able to traverse less than three blocks
+	if (blockY < playerY+playerY_size - (2*blockSize) && blockY+blockSize > playerY) { // Vertical - (2*6) for being able to traverse less than three blocks
 		if (blockX+blockSize >= playerX && blockX <= playerX+playerX_size) {
 				
 			if (playerMovingDirection == 1 && blockX+blockSize < playerX+(playerX_size/2)) {
@@ -173,7 +239,7 @@ function detectPlayerCollision() {
 	// Make it so that we can walk up stairs
 		
 	if (blockX+blockSize > playerX && blockX < playerX+playerX_size) {
-		if (blockY > playerY+playerY_size - (2*6) && blockY < playerY+playerY_size) {
+		if (blockY > playerY+playerY_size - (2*blockSize) && blockY < playerY+playerY_size) {
 			if (!blocksAbovePlayer) {
 				playerInBlocks = true;
 			}
@@ -203,28 +269,61 @@ function setCursor() {
 	}
 }
 
+// CODE FOR CHANGING THE PITCH OF AUDIO, USE LATER: materialSounds[materialSelected].playbackRate = 0.8;
+// materialSounds[materialSelected].preservesPitch = false;
+
 // For drawing or deleting blocks
 function editBlocks() {
 	if (cursorOverWorld) {
 		if (cursorX >= blockX && cursorX < blockX+blockSize && cursorY >= blockPreY && cursorY < blockPreY+blockSize) 
 		{
-			if (mode == 1 && chunks[whichChunk][whichChunkRow][whichBlockOnChunkRow] == 0) {
-				chunks[whichChunk][whichChunkRow][whichBlockOnChunkRow] = 1;
-				stoneDraw.volume = 1;
+			if (placeMode && chunks[whichChunk][whichBlockOnChunk] == 0) {
+				chunks[whichChunk][whichBlockOnChunk] = materialSelected;
+				materialSounds[materialSelected].volume = 1;
 				placeAudioTime = 0;
-				stoneDraw.play();
-			} else if (mode == 2) {
-				chunks[whichChunk][whichChunkRow][whichBlockOnChunkRow] = 0;
+				materialSounds[materialSelected].play();
+			} else if (!placeMode) {
+				//if (chunks[whichChunk][whichBlockOnChunk] == "1") { placeAudioTime = 0; stoneDraw.volume = 1; stoneDraw.play(); }
+				chunks[whichChunk][whichBlockOnChunk] = 0;
 			}
 		}
 	}
 }
 
+
+// For blocks that will fall with gravity
+// This is the algorithm for the physics of falling blocks
+let blockFell = false;
+let blockFalls = false;
+let rowIteration = 1;
+
+function detectFallableBlock() {
+	if (chunks[whichChunk][whichBlockOnChunk] == 4 || chunks[whichChunk][whichBlockOnChunk] == 3) { // If sand, dirt, or water 
+		if (chunks[whichChunk][whichBlockOnChunk - 1] == 0) { //If no blocks below block 
+			blockFell = true;
+			updateFrame = true;
+			chunks[whichChunk][whichBlockOnChunk - 1] = chunks[whichChunk][whichBlockOnChunk];
+			chunks[whichChunk][whichBlockOnChunk] = 0;
+		} else if (chunks[whichChunk][whichBlockOnChunk + (90 - rowIteration) + (rowIteration)] == 0){ // If no block on right
+			blockFell = true;
+			updateFrame = true;
+			chunks[whichChunk][whichBlockOnChunk + (90 - rowIteration + (rowIteration))] = chunks[whichChunk][whichBlockOnChunk];
+			chunks[whichChunk][whichBlockOnChunk] = 0;
+		} else if (chunks[whichChunk][whichBlockOnChunk - (90 - rowIteration + (rowIteration) + 2)] == 0) {
+			blockFell = true;
+			updateFrame = true;
+			chunks[whichChunk][whichBlockOnChunk - (90 - rowIteration + (rowIteration) + 2)] = chunks[whichChunk][whichBlockOnChunk];
+			chunks[whichChunk][whichBlockOnChunk] = 0;
+		}
+	}
+}
+	
+
 function explode() {
 	
 }
 
-  
+
 // The main game-loop below
 
 function applicationLoop() {
@@ -234,17 +333,18 @@ function applicationLoop() {
 	if (applicationRunning) {
 		
 		// Draw the background and the player
-		screen.drawImage(defaultBackdrop, 0, 0, canvas.width, canvas.height);
-		//screen.drawImage(black, canvas.offsetX, canvas.offsetY, 10, 10);
+		screen.drawImage(dayBackdrop1, 0, 0, canvas.width, canvas.height);
 		
 		if (inWorld) {
 				screen.drawImage(playerShades[playerShade], playerX, playerY, playerX_size, playerY_size);
+				
 				// Clear game buffer
 				if (updateFrame) { screenBuffer1.clearRect(0, 0, imageBuffer1.width, imageBuffer1.height); }
 				
 				// Draw the text to the UI buffer
 				if (updateUI) {
 					usefulTextDraw();
+					drawMenuItemBar();
 				}
 				
 				// Initialize these variables every frame
@@ -261,8 +361,8 @@ function applicationLoop() {
 				timeUntilNextChunk = 0;
 				timeUntilNextChunkRow = 0;
 				whichChunk = 1;
-				whichBlockOnChunkRow = 1;
-				whichChunkRow = 1; 
+				whichBlockOnChunk = 1;
+				//whichChunkRow = 1; 
 				breakLoop = false;
 
 				// The for loops below are what renders the pixels
@@ -273,23 +373,29 @@ function applicationLoop() {
 						for (s = 0; s < 120; s++) { // width	
 							for (g = 0; g < 90; g++) { // height
 								if (blockX > (0 - blockSize)) {
-									if (chunks[whichChunk][whichChunkRow][whichBlockOnChunkRow] !== 0) {
+									if (chunks[whichChunk][whichBlockOnChunk] > 0) {
 										blockY = blockPreY;
-										if (updateFrame) { screenBuffer1.drawImage(stoneSprites[blockShade], blockX, blockY, blockSize, blockSize); }
+										if (updateFrame) { 
+											renderWhichMaterials = chunks[whichChunk][whichBlockOnChunk];
+											screenBuffer1.drawImage(Materials[renderWhichMaterials][blockShade], blockX, blockY, blockSize, blockSize); 
+										}
 										
 										detectPlayerCollision();
 									}	
+									detectFallableBlock();
 									if (playerClicked) { editBlocks(); updateFrame = true; }
 									setCursor();
 								}
 								if (blockX+blockSize < 0) { // Skip the row if there are blocks off to the left (< 0)
 									textureBlocks(); 
 									textureBlocks();
+									whichBlockOnChunk+=90;
 									break;
 								}
 								textureBlocks(); 
 								blockPreY -= blockSize;
-								whichBlockOnChunkRow++;
+								whichBlockOnChunk++;
+								rowIteration++;
 							}
 							if (blockX > canvas.width) {
 								breakLoop = true;
@@ -300,14 +406,13 @@ function applicationLoop() {
 							blockPreY = canvas.height - blockSize;
 							blockY = blockPreY;
 							blockX += blockSize;
-							whichBlockOnChunkRow = 1;
-							whichChunkRow++;
+							whichBlockOnChunk += 1;
+							rowIteration = 1;
 						}
 						if (breakLoop) { break; }
 						blockPreY = canvas.height - blockSize;
 						blockY = blockPreY;
-						whichBlockOnChunkRow = 1;
-						whichChunkRow = 1;
+						whichBlockOnChunk = 1;
 						whichChunk++;
 					}
 
@@ -319,7 +424,7 @@ function applicationLoop() {
 					screen.drawImage(imageBuffer1, 0, 0, canvas.width, canvas.height);
 
 					// Draw the cursor
-					screen.drawImage(transparentCursor, cursorX, cursorY, blockSize, blockSize);
+					if (cursorOverWorld) { screen.drawImage(transparentCursor, cursorX, cursorY, blockSize, blockSize); }
 
 					// So when we fall off the map we fall back onto it
 					if (playerY > canvas.height) {
@@ -352,7 +457,7 @@ function applicationLoop() {
 					}
 
 					// Movement code (for the player's movement) 1 = left, 2 = right
-					if (playerMovingDirection == 1) { 
+					if (playerMovingDirection == 1) { // left
 						scrollX += playerSpeed;
 						scrollX_inverse -= playerSpeed;
 						updateFrame = true;
@@ -360,7 +465,65 @@ function applicationLoop() {
 						scrollX -= playerSpeed;
 						scrollX_inverse += playerSpeed; 
 						updateFrame = true;
+						//playFootstepSounds();
+					}
+					
+					// Draw the item icons in the item menu bar slots
+					screen.drawImage(itemMenuBarIcons[itemMenuBarContents[1]], 10+itemMenuBarSlotsAdditionalPositions[1], 150, 34, 34); // 1
+					screen.drawImage(itemMenuBarIcons[itemMenuBarContents[2]], 10+itemMenuBarSlotsAdditionalPositions[2], 190, 34, 34); // 2
+					screen.drawImage(itemMenuBarIcons[itemMenuBarContents[3]], 10+itemMenuBarSlotsAdditionalPositions[3], 230, 34, 34); // 3
+					screen.drawImage(itemMenuBarIcons[itemMenuBarContents[4]], 10+itemMenuBarSlotsAdditionalPositions[4], 270, 34, 34); // 4
+					
+					//screen.drawImage(itemMenuBarIcons[itemMenuBarContents[4]], 10+itemMenuBarSlotsAdditionalPositions[4], 270, 34, 34); // ERASE
+					
+					// Detect if mouse is over the item menu bar slots
+					if (cursorX < 54 && cursorX > 4 && cursorY > 150 && cursorY < 396) {
+						drawMenuItemBar();
+						updateUI = true;
+						cursorOverWorld = false;
+						if (cursorY < 186) {
+							cursorOverWhichMenuBarSlot = 1;
+						} else if (cursorY > 190 && cursorY < 226) {
+							cursorOverWhichMenuBarSlot = 2;
+						} else if (cursorY > 230 && cursorY < 266) {
+							cursorOverWhichMenuBarSlot = 3;
+						} else if (cursorY > 270 && cursorY < 306) {
+							cursorOverWhichMenuBarSlot = 4;
+						} 
+						
+						if (cursorY > 320 && cursorY < 356) {
+							cursorOverWhichMenuBarSlot = 5; // draw
+						} else if (cursorY > 360 && cursorY < 396) {
+							cursorOverWhichMenuBarSlot = 6; // erase
+						}
+						if (playerClicked) {
+							if (cursorY < 306) {
+								materialSelected = itemMenuBarContents[cursorOverWhichMenuBarSlot];
+								itemMenuBarSlotsAdditionalPositions[1] = 0;
+								itemMenuBarSlotsAdditionalPositions[2] = 0;
+								itemMenuBarSlotsAdditionalPositions[3] = 0;
+								itemMenuBarSlotsAdditionalPositions[4] = 0;
+							} 
+							if (cursorOverWhichMenuBarSlot == 5) {
+								itemMenuBarSlotsAdditionalPositions[6] = 0;
+								placeMode = true;	
+							} else if (cursorOverWhichMenuBarSlot == 6) {
+								itemMenuBarSlotsAdditionalPositions[5] = 0;
+								placeMode = false;	
+							}
+							itemMenuBarSlotsAdditionalPositions[cursorOverWhichMenuBarSlot] = 8;
+							click1.currentTime = 0;
+							click1.play();
+						}
+					} else{
+						cursorOverWorld = true;
+					}
+					
+					// For showing the editor menu
+					if (showingEditorMenu) {
+						screen.drawImage(transparentBlack, canvas.width/4, canvas.height/4, 350, 200);
 					}	
+					
 				} else if (gamePaused) {
 					
 					// If the game is paused, draw the UI elements
@@ -378,6 +541,7 @@ function applicationLoop() {
 							// If we click the continue button while mouse over, continue the game
 							if (playerClicked) {
 								screenBuffer2.clearRect(0, 0, imageBuffer2.width, imageBuffer2.height);
+								drawMenuItemBar();
 								usefulTextDraw();
 								updateUI = true;
 								updateFrame = true;
@@ -435,27 +599,23 @@ function applicationLoop() {
 						
 						// Detect if we click the play button while mouse over
 						if (playerClicked) {
-							screenBuffer1.clearRect(0, 0, imageBuffer1.width, imageBuffer1.height);
-							screenBuffer2.clearRect(0, 0, imageBuffer2.width, imageBuffer2.height);
-							updateUI = true;
-							updateFrame = true;
-							onMenu = false;
-							inWorld = true;
-							versionTextDraw();
-							usefulTextDraw();
-							mode = 1;
-							playerClicked = false;
+							loadWorld();
 						}
 					}
 				} 
 			}
+			
+			if (blockFell) { updateFrame = true;}
+			
 			placeAudioTime++;
 			if (placeAudioTime > 11) {
-				stoneDraw.volume -= 0.1;
+				materialSounds[materialSelected].volume -= 0.1;
+				//woodDraw.volume = stoneDraw.volume;
 				
-				if (stoneDraw.volume < 0.1) {
-					stoneDraw.pause();
-					stoneDraw.volume = 0.1;
+				if (materialSounds[materialSelected].volume < 0.1) {
+					materialSounds[materialSelected].pause();
+					materialSounds[materialSelected].volume = 0.1;
+					//materialSounds[materialSelected].volume = materialSounds[materialSelected];
 				}
 				//stoneDraw.volume = volume;
 			
@@ -477,11 +637,13 @@ requestAnimationFrame(applicationLoop);
 
 // Handling keyboard inputs
 document.addEventListener("keydown", function(event) {
-	if (event.key === "a" || event.key === "ArrowLeft") {
-		if (!gamePaused && !onMenu) { playerMovingDirection = 1; updateFrame = true; }
-	} 
-	if (event.key === "d" || event.key === "ArrowRight") {
-		if (!gamePaused && !onMenu) { playerMovingDirection = 2; updateFrame = true; }
+	if (cursorOverWorld) {
+		if (event.key === "a" || event.key === "ArrowLeft") {
+			if (!gamePaused && !onMenu) { playerMovingDirection = 1; updateFrame = true; }
+		} 
+		if (event.key === "d" || event.key === "ArrowRight") {
+			if (!gamePaused && !onMenu) { playerMovingDirection = 2; updateFrame = true; }
+		}
 	}
 	if (event.key === " ") {
 		if (!playerIsJumping && !playerIsFalling && !gamePaused && !onMenu) {
@@ -503,10 +665,12 @@ document.addEventListener("keyup", function(event) {
 	}
 	if (event.key === "g") {
 		if (!gamePaused && !onMenu) {
-			if (mode == 1) {
-				mode = 2;
-			} else if (mode == 2) {
-				mode = 1;
+			if (showingEditorMenu) {
+				showingEditorMenu = false;
+				cursorOverWorld = true;
+			} else if (!showingEditorMenu) {
+				showingEditorMenu = true;
+				cursorOverWorld = false;
 			}
 		}
 	}
