@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>TapClank Official</title>
+		<meta charset="UTF-8"/>
+		<style>
+			/* roboto-regular - latin */
+			@font-face { 
+  				font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  				font-family: 'Roboto';
+  				font-style: normal;
+  				font-weight: 400;
+  				src: url('fonts/roboto-v48-latin-regular.woff2') format('woff2'), /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+       			url('fonts/roboto-v48-latin-regular.ttf') format('truetype'); /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+			}
+			/* roboto-500 - latin */
+			@font-face {
+ 	 			font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  				font-family: 'Roboto';
+  				font-style: normal;
+  				font-weight: 500; 
+  				src: url('fonts/roboto-v48-latin-500.woff2') format('woff2'), /* Chrome 36+, Opera 23+, Firefox 39+, Safari 12+, iOS 10+ */
+       				url('fonts/roboto-v48-latin-500.ttf') format('truetype'); /* Chrome 4+, Firefox 3.5+, IE 9+, Safari 3.1+, iOS 4.2+, Android Browser 2.2+ */
+			}
+			body { 
+				background-color: #e3f1ff;
+				background-size: cover;
+				background-image: url("background1.png");
+				font-family: "Roboto", sans-serif; 
+				margin: 0;
+				padding: 0;
+			}	
+			
+			a {
+				color: blue;
+			}
+			
+			#paragraph {
+				font-size: 20px;
+				width: 70%;
+				margin: auto;
+			}
+			#bold {
+				font-weight: 500;
+				font-size: 25px;
+				text-align: center;
+			}
+			
+			#canvas {
+				position: relative;
+				left: 50%;
+				transform: translate(-50%);
+				outline: black 2px solid;
+				image-rendering: pixelated;
+			}
+			
+			#launch_button {
+				margin: 0 auto;
+				display: block;
+				font-family: "Roboto", sans-serif; 
+				font-size: 30px;
+			}
+			#launch_button:hover {
+				cursor: pointer;
+			}
+			
+			#italic_centered {
+				text-align: center;
+				font-family: "Roboto", sans-serif;
+				font-size: 18px;
+			}
+			
+				 
+		</style>
+	</head>
+	<body>
+		<br><br>
+		<canvas id="canvas" width="700" height="320"></canvas>
+		<br>
+		<p id="bold"><i>News!!!</i></p>
+		<p id="paragraph">Tapclank has been updated to version 1.01.2! 
+		<br>With this update comes some exciting new feautures, such as:
+		<br><br>1. Walk cycle - when your player walks, there is now a full walking animation (with footstep sounds).
+		<br><br>2. Terrain generation - semi-functional (experimental) terrain generation has been implemented. <br>
+		<br> There have also been some minor bug fixes (mostly related to collision). Oh, and the screen is now 
+		<br> fully resizable! Along with that, the game now has its own launcher as well.
+		<br><br>
+		<p id="bold">Overview</p>
+		<p id="paragraph">
+			Tapclank is an open-world sandbox game which grants you the creative
+			freedom to build and explore your own creations. Draw structures, build buildings,
+			and whatever other thing that arises from your imagination.
+			<br>
+		</p>
+		<p>
+		<p id="bold">Controls</p>
+		<p id="paragraph">
+			- A,D or left and right arrow keys to move<br>
+			- Shift to sprint<br>
+			- Space to jump<br>
+			- E to open inventory<br>
+			- click/tap and hold to draw or erase materials<br>
+			- ESC to pause game<br>
+		</p>
+		<br><br><br>
+		<p id="paragraph">
+			<b>Note:</b> the game is currently in pre-alpha, and may contain bugs.<br>
+			TapClank is a passion project developed by Lumovalley Labs.
+			<br><br>
+			You can also find this game and similar projects made by LumoValley Labs on our <a href="https://lumovalley-labs.itch.io/">itch.io page</a>
+		</p>
+		<script src="launcher/tapclank_launcher.js"></script>
+	</body>
+</html>
