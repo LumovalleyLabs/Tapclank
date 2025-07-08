@@ -26,5 +26,5 @@ document.addEventListener("mousemove", function(event) {
 	ctx2.drawImage(launchButton, Math.floor(canvas.width/2)-150/2, 240, 150, 35);ctx.drawImage(cvs2, 0, 0, canvas.width, canvas.height);
 });
 document.addEventListener("mousedown", function(event) {
-	if (event) {if (mol) {window.open("game/Tapclank/tapclank.html", 'Tapclank', 'width='+wx_size+',height='+wy_size+',left='+wx+', top='+wy+''); mol=false; }}
+	if (event) {if (mol) {window.open("game/Tapclank/index.html", 'Tapclank', 'width='+wx_size+',height='+wy_size+',left='+wx+', top='+wy+''); mol=false; }}
 });
